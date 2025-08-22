@@ -262,6 +262,10 @@ func parseRequest(request string) (string, string, error) {
 
 // parseUpstreamTime sums an nginx $upstream_response_time value into a single float.
 func parseUpstreamTime(upstreamTime string) (float64, error) {
+	if upstreamTime == "-" {
+		return 0, nil
+	}
+
 	var totalTime float64
 
 	for _, timeString := range strings.Split(upstreamTime, ", ") {
