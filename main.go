@@ -138,7 +138,7 @@ LINES:
 		if request, err := entry.Field("request"); err == nil {
 			method, path, err := parseRequest(request)
 			if err != nil {
-				logger.Warn("(%s): Failed to parse request field: %s", err)
+				logger.Warn("(%s): Failed to parse request field: %v", file, err)
 				continue
 			}
 			logger.Debug("(%s): method and path are: %s and %s", file, method, path)
@@ -197,21 +197,21 @@ LINES:
 			metrics.bodyBytes.WithLabelValues(labelValues...).Observe(bodyBytes)
 		}
 
-		if upstreamTime, err := entry.Field("upstream_response_time"); err == nil {
+		if upstreamTime, err := entry.Field("upstream_response_time"); err == nil && upstreamTime != "-" {
 			if totalTime, err := parseUpstreamTime(upstreamTime); err == nil {
 				logger.Debug("(%s): matched upstream_response_time to %.3f", file, totalTime)
 				metrics.upstreamSeconds.WithLabelValues(labelValues...).Observe(totalTime)
 			} else {
-				logger.Warn("(%s): failed to parse upstream_response_time field, line: %s", file, line, err)
+				logger.Warn("(%s): failed to parse upstream_response_time field, line: %s, err: %v", file, line, err)
 			}
 		}
 
-		if headerTime, err := entry.Field("upstream_header_time"); err == nil {
+		if headerTime, err := entry.Field("upstream_header_time"); err == nil && headerTime != "-" {
 			if totalTime, err := parseUpstreamTime(headerTime); err == nil {
 				logger.Debug("(%s): matched upstream_header_time to %.3f", file, totalTime)
 				metrics.upstreamHeaderSeconds.WithLabelValues(labelValues...).Observe(totalTime)
 			} else {
-				logger.Warn("(%s): failed to parse upstream_header_time field, line: %s", file, line, err)
+				logger.Warn("(%s): failed to parse upstream_header_time field, line: %s, err: %v", file, line, err)
 			}
 		}
 
@@ -262,10 +262,6 @@ func parseRequest(request string) (string, string, error) {
 
 // parseUpstreamTime sums an nginx $upstream_response_time value into a single float.
 func parseUpstreamTime(upstreamTime string) (float64, error) {
-	if upstreamTime == "-" {
-		return 0, nil
-	}
-
 	var totalTime float64
 
 	for _, timeString := range strings.Split(upstreamTime, ", ") {
